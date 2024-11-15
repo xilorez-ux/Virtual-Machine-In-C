@@ -9,15 +9,20 @@
 
 
 typedef enum {
-	INST_PUSH,
+	INST_PUSH, //add value to the stack
 	INST_POP,
-	INST_DUP,
-	INST_SWAP,
-	INST_ADD,
-	INST_SUB,
-	INST_MUL,
-	INST_DIV,
-	INST_PRINT,
+	INST_DUP, //duplicate a value
+	INST_SWAP, //swap values a and b's positions in the stack (a --> b, b-->a)
+	INST_ADD, //add a and b
+	INST_SUB, //sub a and b
+	INST_MUL, //multiplying a and b
+	INST_DIV, //dividing a by b
+	INST_CMPE, //compare if given values are equal
+	INST_CMPNE, //compare if given values are not equal
+	INST_CMPG, //compare if given value a is greater than value b
+	INST_CMPL, //compare if given value a is lower than value b
+	INST_JMP, //go to specified value index in the stack
+	INST_PRINT, //print corresponding value in the stack, if not specified then first in the stack
 } Inst_Set;
 
 typedef struct{
@@ -40,20 +45,22 @@ typedef struct{
 #define DEF_INST_SUB() {.type = INST_SUB}
 #define DEF_INST_MUL() {.type = INST_MUL}
 #define DEF_INST_DIV() {.type = INST_DIV}
+#define DEF_INST_CMPE() {.type = INST_CMPE}
+#define DEF_INST_CMPNE() {.type = INST_CMPNE}
+#define DEF_INST_CMPG() {.type = INST_CMPG}
+#define DEF_INST_CMPL() {.type = INST_CMPL}
+#define DEF_INST_JMP(x) {.type = INST_JMP, .value = x}
 #define DEF_INST_PRINT() {.type = INST_PRINT}
 
 
 Inst program[] = {
 	DEF_INST_PUSH(1),
 	DEF_INST_PUSH(2),
-	DEF_INST_PUSH(3),
-	DEF_INST_PUSH(4),
-	DEF_INST_PUSH(5),
-	DEF_INST_SWAP(),
 	DEF_INST_ADD(),
-	DEF_INST_SWAP(),
-	DEF_INST_PRINT(),
-};
+	DEF_INST_PUSH(4),
+	DEF_INST_CMPL(),
+	DEF_INST_JMP(0),
+	};
 
 #define PROGRAM_SIZE (sizeof(program)/sizeof(program[0]))
 
@@ -112,9 +119,11 @@ Machine *read_program_from_file(Machine *machine, char *file_path){
 }
 
 void print_stack(Machine *machine){
+	printf("------ STACK\n");
 	for(int i = machine->stack_size - 1; i >= 0; i--){
 		printf("%d\n", machine->stack[i]);
 	}
+	printf("------ END OF STACK\n");
 }
 
 
@@ -167,12 +176,68 @@ int main(void){
 				}
 				push(loaded_machine, a / b);
 				break;
+			case INST_CMPE:
+				a = pop(loaded_machine);
+				b = pop(loaded_machine);
+				push(loaded_machine, b);
+				push(loaded_machine, a);
+				if(a == b){
+					push(loaded_machine, 1);
+				} else {
+					push(loaded_machine, 0);
+				}
+				break;
+			case INST_CMPNE:
+				a = pop(loaded_machine);
+				b = pop(loaded_machine);
+				push(loaded_machine, b);
+				push(loaded_machine, a);
+				if(a != b){
+					push(loaded_machine,1);
+				} else {
+					push(loaded_machine,0);
+				}
+				break;
+			case INST_CMPG:
+				a = pop(loaded_machine);
+				b = pop(loaded_machine);
+				push(loaded_machine, a);
+				push(loaded_machine, b);
+				if(a > b){
+					push(loaded_machine, 1);
+				}
+				else if(a ==b){
+					fprintf(stderr, "Error: wrong method called, a == b");
+				} else {
+					push(loaded_machine, 0);
+				}
+				break;
+			case INST_CMPL:
+				a = pop(loaded_machine);
+				b = pop(loaded_machine);
+				push(loaded_machine, a);
+				push(loaded_machine, b);
+				if(a < b){
+					push(loaded_machine, 1);
+				} else if(a == b){
+				       fprintf(stderr, "Error: wrong method called, a == b");
+				} else {
+					push(loaded_machine, 0);
+				}
+				break;
+			case INST_JMP:
+				if(pop(loaded_machine) == 1){
+					ip = loaded_machine->instructions[ip].value;
+				} else {
+					continue;
+				}
+				break;
 			case INST_PRINT:
 				printf("%d\n", pop(loaded_machine));
 				break;
 		}
 	}
-
+	print_stack(loaded_machine);
 	return 0;
 }
 
