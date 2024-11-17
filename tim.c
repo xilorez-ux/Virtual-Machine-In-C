@@ -21,6 +21,7 @@ typedef enum {
 	INST_CMPNE, //compare if given values are not equal
 	INST_CMPG, //compare if given value a is greater than value b
 	INST_CMPL, //compare if given value a is lower than value b
+	INST_CJMP, 
 	INST_JMP, //go to specified value index in the stack
 	INST_PRINT, //print corresponding value in the stack, if not specified then first in the stack
 } Inst_Set;
@@ -49,17 +50,20 @@ typedef struct{
 #define DEF_INST_CMPNE() {.type = INST_CMPNE}
 #define DEF_INST_CMPG() {.type = INST_CMPG}
 #define DEF_INST_CMPL() {.type = INST_CMPL}
+#define DEF_INST_CJMP(x) {.type = INST_CJMP, .value = x}
 #define DEF_INST_JMP(x) {.type = INST_JMP, .value = x}
 #define DEF_INST_PRINT() {.type = INST_PRINT}
 
 
 Inst program[] = {
 	DEF_INST_PUSH(1),
+	DEF_INST_PUSH(1),
+	DEF_INST_CMPE(),
+	DEF_INST_CJMP(7),
 	DEF_INST_PUSH(2),
 	DEF_INST_ADD(),
 	DEF_INST_PUSH(4),
-	DEF_INST_CMPL(),
-	DEF_INST_JMP(0),
+	DEF_INST_PRINT(),
 	};
 
 #define PROGRAM_SIZE (sizeof(program)/sizeof(program[0]))
@@ -118,13 +122,6 @@ Machine *read_program_from_file(Machine *machine, char *file_path){
 
 }
 
-void print_stack(Machine *machine){
-	printf("------ STACK\n");
-	for(int i = machine->stack_size - 1; i >= 0; i--){
-		printf("%d\n", machine->stack[i]);
-	}
-	printf("------ END OF STACK\n");
-}
 
 
 int main(void){
@@ -225,11 +222,22 @@ int main(void){
 					push(loaded_machine, 0);
 				}
 				break;
-			case INST_JMP:
+			case INST_CJMP:
 				if(pop(loaded_machine) == 1){
-					ip = loaded_machine->instructions[ip].value;
+					ip = loaded_machine->instructions[ip].value - 1;
+					if(ip + 1 >= loaded_machine->program_size){
+						fprintf(stderr, "ERROR: Cannot jump out of bounds\n");
+						exit(1);
+					}
 				} else {
 					continue;
+				}
+				break;
+			case INST_JMP:
+				ip = loaded_machine->instructions[ip].value - 1;
+				if(ip + 1 >=loaded_machine->program_size){
+					fprintf(stderr, "ERROR: Cannot jump out of bounds\n");
+					exit(1);
 				}
 				break;
 			case INST_PRINT:
@@ -237,7 +245,7 @@ int main(void){
 				break;
 		}
 	}
-	print_stack(loaded_machine);
+
 	return 0;
 }
 
